@@ -408,7 +408,7 @@
             body: JSON.stringify({ campo: campo, dataBase64: base64, contentType: file.type || 'image/jpeg' })
           }).then(function (res) { return res.json().then(function (data) { return { ok: res.ok, data: data }; }); })
             .then(function (r) {
-              if (!r.ok) throw new Error((r.data && r.data.error) || 'fallo al subir');
+              if (!r.ok) throw new Error((r.data && (r.data.error + (r.data.detail ? ': ' + r.data.detail : ''))) || 'fallo al subir');
               return callAdmin('guardar_contenido', { campo: campo, valor: r.data.url, tipo: 'imagen' });
             }).then(function () {
               statusEl.textContent = 'Foto subida y guardada.'; statusEl.className = 'msg ok';
@@ -468,7 +468,7 @@
         body: JSON.stringify({ campo: campo, dataBase64: base64, contentType: file.type || 'image/jpeg' })
       }).then(function (res) { return res.json().then(function (data) { return { ok: res.ok, data: data }; }); })
         .then(function (r) {
-          if (!r.ok) throw new Error((r.data && r.data.error) || 'fallo al subir');
+          if (!r.ok) throw new Error((r.data && (r.data.error + (r.data.detail ? ': ' + r.data.detail : ''))) || 'fallo al subir');
           return callAdmin('guardar_contenido', { campo: campo, valor: r.data.url, tipo: 'imagen' });
         }).then(function () {
           msg.textContent = 'Foto añadida.'; msg.className = 'msg ok';
