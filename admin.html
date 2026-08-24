@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<title>Panel — Ángela Conejero Peluquería</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='.9em' font-size='90'%3E%E2%9C%82%EF%B8%8F%3C/text%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bodoni+Moda:ital,opsz,wght@0,6..96,400..700;1,6..96,400..700&family=Manrope:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --paper: #F7F1E6; --surface: #FFFFFF; --surface-sunken: #EFE4D2;
+    --ink: #1C1410; --ink-soft: #6B5B4C; --ink-faint: #9C8D79;
+    --line: rgba(28,20,16,0.14); --line-strong: rgba(28,20,16,0.26);
+    --gold: #8C6A22; --gold-strong: #6E5119; --gold-contrast: #FBF6EC;
+    --danger: #A23B3B; --ok: #3B7A4E;
+    --font-display: 'Bodoni Moda', Georgia, serif;
+    --font-body: 'Manrope', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --paper: #1C1713; --surface: #241D17; --surface-sunken: #2C231B;
+      --ink: #F3E9D8; --ink-soft: #C9B89C; --ink-faint: #8F7E68;
+      --line: rgba(243,233,216,0.16); --line-strong: rgba(243,233,216,0.28);
+      --gold: #D4B564; --gold-strong: #E8CD86; --gold-contrast: #1C1410;
+    }
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--paper); color: var(--ink); font-family: var(--font-body); line-height: 1.5; }
+  .wrap { max-width: 760px; margin: 0 auto; padding: 2.5rem 1.5rem 5rem; }
+  h1, h2 { font-family: var(--font-display); }
+  h1 { font-size: 1.6rem; font-style: italic; margin: 0 0 0.3rem; }
+  .sub { color: var(--ink-soft); margin: 0 0 2.5rem; font-size: 0.92rem; }
+  h2 { font-size: 1.2rem; font-weight: 600; margin: 0 0 0.3rem; }
+  section.panel { background: var(--surface); border: 1px solid var(--line); border-radius: 4px; padding: 1.6rem 1.7rem; margin-bottom: 1.8rem; }
+  .panel-sub { color: var(--ink-faint); font-size: 0.85rem; margin: 0 0 1.3rem; }
+  label { display: block; font-size: 0.7rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--gold); margin-bottom: 0.4rem; }
+  input, select {
+    width: 100%; font-family: var(--font-body); font-size: 0.92rem; color: var(--ink);
+    background: var(--paper); border: 1px solid var(--line-strong); border-radius: 3px; padding: 0.6rem 0.75rem;
+  }
+  input:focus, select:focus { outline: 2px solid var(--gold); outline-offset: 1px; }
+  .btn {
+    font-family: var(--font-body); font-weight: 600; font-size: 0.85rem; border: none; border-radius: 3px;
+    padding: 0.6rem 1.2rem; cursor: pointer; background: var(--gold); color: var(--gold-contrast);
+  }
+  .btn:hover { background: var(--gold-strong); }
+  .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+  .btn.danger { background: transparent; color: var(--danger); border: 1px solid var(--danger); }
+  .btn.danger:hover { background: var(--danger); color: #fff; }
+  .row { display: grid; grid-template-columns: 1fr 1fr; gap: 0.9rem; }
+  .row3 { display: grid; grid-template-columns: 1.4fr 1fr 1fr auto; gap: 0.7rem; align-items: end; }
+  @media (max-width: 620px) { .row, .row3 { grid-template-columns: 1fr; } }
+  .field { margin-bottom: 1rem; }
+
+  table { width: 100%; border-collapse: collapse; font-size: 0.9rem; }
+  th { text-align: left; font-size: 0.7rem; letter-spacing: 0.06em; text-transform: uppercase; color: var(--ink-faint); padding-bottom: 0.5rem; border-bottom: 1px solid var(--line-strong); }
+  td { padding: 0.55rem 0.4rem; border-bottom: 1px solid var(--line); vertical-align: middle; }
+  td input { padding: 0.4rem 0.5rem; font-size: 0.88rem; }
+  .empty-row td { color: var(--ink-faint); font-style: italic; }
+
+  .msg { margin-top: 0.9rem; font-size: 0.87rem; min-height: 1.2em; }
+  .msg.ok { color: var(--ok); }
+  .msg.err { color: var(--danger); }
+
+  #gate { max-width: 360px; margin: 5rem auto; text-align: center; }
+  #gate .field { text-align: left; }
+  #app { display: none; }
+</style>
+</head>
+<body>
+
+<div id="gate">
+  <h1>Panel de Ángela</h1>
+  <p class="sub">Introduce la clave de acceso.</p>
+  <div class="field">
+    <label for="gate-key">Clave</label>
+    <input type="password" id="gate-key" autocomplete="off">
+  </div>
+  <button class="btn" id="gate-btn" style="width:100%;">Entrar</button>
+  <p class="msg err" id="gate-msg"></p>
+</div>
+
+<div id="app">
+  <div class="wrap">
+    <h1>Panel de Ángela</h1>
+    <p class="sub">Precios, días cerrados y reservas por teléfono.</p>
+
+    <section class="panel">
+      <h2>Precios</h2>
+      <p class="panel-sub">Cambia el precio o la duración y pulsa Guardar en esa fila.</p>
+      <table>
+        <thead><tr><th>Servicio</th><th>Duración (min)</th><th>Precio (€)</th><th></th></tr></thead>
+        <tbody id="precios-body"></tbody>
+      </table>
+      <p class="msg" id="precios-msg"></p>
+    </section>
+
+    <section class="panel">
+      <h2>Días cerrados</h2>
+      <p class="panel-sub">Fiestas, vacaciones... esos días no se podrán reservar en la web.</p>
+      <table>
+        <thead><tr><th>Fecha</th><th>Motivo</th><th></th></tr></thead>
+        <tbody id="dias-body"></tbody>
+      </table>
+      <div class="row3" style="margin-top:1.2rem;">
+        <div class="field" style="margin-bottom:0;"><label for="dia-fecha">Fecha</label><input type="date" id="dia-fecha"></div>
+        <div class="field" style="margin-bottom:0; grid-column: span 2;"><label for="dia-motivo">Motivo</label><input type="text" id="dia-motivo" placeholder="Vacaciones, festivo..."></div>
+        <button class="btn" id="dia-add-btn">Añadir</button>
+      </div>
+      <p class="msg" id="dias-msg"></p>
+    </section>
+
+    <section class="panel">
+      <h2>Reserva por teléfono</h2>
+      <p class="panel-sub">Queda guardada y en el calendario, igual que una online — pero sin email a nadie.</p>
+      <div class="row">
+        <div class="field"><label for="rm-nombre">Nombre</label><input type="text" id="rm-nombre"></div>
+        <div class="field"><label for="rm-fecha">Fecha</label><input type="date" id="rm-fecha"></div>
+      </div>
+      <div class="field"><label for="rm-hora">Hora</label><input type="text" id="rm-hora" placeholder="17:00"></div>
+      <button class="btn" id="rm-btn">Guardar reserva</button>
+      <p class="msg" id="rm-msg"></p>
+    </section>
+  </div>
+</div>
+
+<script>
+  var ADMIN_URL = 'https://frangd197.app.n8n.cloud/webhook/admin-angela';
+
+  function getKey() { return sessionStorage.getItem('angelaAdminKey') || ''; }
+  function setKey(k) { sessionStorage.setItem('angelaAdminKey', k); }
+  function clearKey() { sessionStorage.removeItem('angelaAdminKey'); }
+
+  function callAdmin(action, fields) {
+    var body = Object.assign({ action: action }, fields || {});
+    return fetch(ADMIN_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'x-admin-key': getKey() },
+      body: JSON.stringify(body)
+    }).then(function (res) {
+      if (res.status === 401) { clearKey(); showGate('Clave incorrecta. Vuelve a probar.'); throw new Error('unauthorized'); }
+      if (!res.ok) throw new Error('bad status');
+      return res.json();
+    });
+  }
+
+  function showGate(msg) {
+    document.getElementById('app').style.display = 'none';
+    document.getElementById('gate').style.display = 'block';
+    document.getElementById('gate-msg').textContent = msg || '';
+  }
+  function showApp() {
+    document.getElementById('gate').style.display = 'none';
+    document.getElementById('app').style.display = 'block';
+    loadPrecios();
+    loadDias();
+  }
+
+  document.getElementById('gate-btn').addEventListener('click', function () {
+    var val = document.getElementById('gate-key').value.trim();
+    if (!val) return;
+    setKey(val);
+    callAdmin('listar_precios').then(function () { showApp(); }).catch(function () {});
+  });
+  document.getElementById('gate-key').addEventListener('keydown', function (e) {
+    if (e.key === 'Enter') document.getElementById('gate-btn').click();
+  });
+
+  // ---- Precios ----
+  var currentPrecios = [];
+  function loadPrecios() {
+    callAdmin('listar_precios').then(function (data) {
+      currentPrecios = (data.precios || []).slice().sort(function (a, b) { return a.servicio.localeCompare(b.servicio); });
+      renderPrecios();
+    }).catch(function () {});
+  }
+  function renderPrecios() {
+    var tbody = document.getElementById('precios-body');
+    if (!currentPrecios.length) { tbody.innerHTML = '<tr class="empty-row"><td colspan="4">Sin precios todavía.</td></tr>'; return; }
+    tbody.innerHTML = currentPrecios.map(function (p, i) {
+      return '<tr>' +
+        '<td>' + p.servicio + '</td>' +
+        '<td><input type="number" min="0" step="5" data-i="' + i + '" data-f="duracion" value="' + p.duracion + '"></td>' +
+        '<td><input type="number" min="0" step="1" data-i="' + i + '" data-f="precio" value="' + p.precio + '"></td>' +
+        '<td><button class="btn" data-save="' + i + '">Guardar</button></td>' +
+        '</tr>';
+    }).join('');
+    tbody.querySelectorAll('[data-save]').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        var i = Number(btn.getAttribute('data-save'));
+        var row = btn.closest('tr');
+        var duracion = Number(row.querySelector('[data-f="duracion"]').value);
+        var precio = Number(row.querySelector('[data-f="precio"]').value);
+        var msg = document.getElementById('precios-msg');
+        btn.disabled = true;
+        callAdmin('guardar_precio', { servicio: currentPrecios[i].servicio, duracion: duracion, precio: precio }).then(function () {
+          currentPrecios[i].duracion = duracion;
+          currentPrecios[i].precio = precio;
+          msg.textContent = 'Guardado.'; msg.className = 'msg ok';
+        }).catch(function () {
+          msg.textContent = 'No se pudo guardar.'; msg.className = 'msg err';
+        }).finally(function () { btn.disabled = false; });
+      });
+    });
+  }
+
+  // ---- Días cerrados ----
+  var currentDias = [];
+  function loadDias() {
+    callAdmin('listar_dias_cerrados').then(function (data) {
+      currentDias = (data.diasCerrados || []).slice().sort(function (a, b) { return a.fecha.localeCompare(b.fecha); });
+      renderDias();
+    }).catch(function () {});
+  }
+  function renderDias() {
+    var tbody = document.getElementById('dias-body');
+    if (!currentDias.length) { tbody.innerHTML = '<tr class="empty-row"><td colspan="3">No hay días cerrados marcados.</td></tr>'; return; }
+    tbody.innerHTML = currentDias.map(function (d) {
+      return '<tr><td>' + d.fecha + '</td><td>' + (d.motivo || '') + '</td><td><button class="btn danger" data-remove="' + d.fecha + '">Quitar</button></td></tr>';
+    }).join('');
+    tbody.querySelectorAll('[data-remove]').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        var fecha = btn.getAttribute('data-remove');
+        btn.disabled = true;
+        callAdmin('quitar_dia_cerrado', { fecha: fecha }).then(function () { loadDias(); }).catch(function () { btn.disabled = false; });
+      });
+    });
+  }
+  document.getElementById('dia-add-btn').addEventListener('click', function () {
+    var fecha = document.getElementById('dia-fecha').value;
+    var motivo = document.getElementById('dia-motivo').value.trim();
+    var msg = document.getElementById('dias-msg');
+    if (!fecha) { msg.textContent = 'Elige una fecha.'; msg.className = 'msg err'; return; }
+    callAdmin('anadir_dia_cerrado', { fecha: fecha, motivo: motivo }).then(function () {
+      document.getElementById('dia-fecha').value = '';
+      document.getElementById('dia-motivo').value = '';
+      msg.textContent = 'Añadido.'; msg.className = 'msg ok';
+      loadDias();
+    }).catch(function () { msg.textContent = 'No se pudo añadir.'; msg.className = 'msg err'; });
+  });
+
+  // ---- Reserva manual (por teléfono — sin email a nadie) ----
+  document.getElementById('rm-btn').addEventListener('click', function () {
+    var fecha = document.getElementById('rm-fecha').value;
+    var hora = document.getElementById('rm-hora').value.trim();
+    var nombre = document.getElementById('rm-nombre').value.trim();
+    var msg = document.getElementById('rm-msg');
+    var btn = document.getElementById('rm-btn');
+    if (!fecha || !hora || !nombre) {
+      msg.textContent = 'Completa nombre, fecha y hora.'; msg.className = 'msg err'; return;
+    }
+    btn.disabled = true;
+    msg.textContent = 'Guardando...'; msg.className = 'msg';
+    callAdmin('reserva_manual', { fecha: fecha, hora: hora, nombre: nombre }).then(function () {
+      msg.textContent = 'Reserva guardada.'; msg.className = 'msg ok';
+      ['rm-fecha', 'rm-hora', 'rm-nombre'].forEach(function (id) { document.getElementById(id).value = ''; });
+    }).catch(function () {
+      msg.textContent = 'No se pudo guardar la reserva.'; msg.className = 'msg err';
+    }).finally(function () { btn.disabled = false; });
+  });
+
+  // Auto-entrar si ya había una clave guardada en esta sesión del navegador
+  if (getKey()) {
+    callAdmin('listar_precios').then(function () { showApp(); }).catch(function () {});
+  }
+</script>
+</body>
+</html>
