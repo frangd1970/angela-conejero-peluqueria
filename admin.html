@@ -137,6 +137,17 @@
       <div id="contenido-list"></div>
       <p class="msg" id="contenido-msg"></p>
     </section>
+
+    <section class="panel">
+      <h2>Galería</h2>
+      <p class="panel-sub">Añade tantas fotos como quieras — se reparten solas en filas equilibradas en la web. Puedes subirlas desde la galería del móvil, la cámara, o archivos del ordenador.</p>
+      <div id="galeria-grid" style="display:grid; grid-template-columns:repeat(auto-fill, minmax(90px, 1fr)); gap:0.8rem; margin-bottom:1.2rem;"></div>
+      <div class="field" style="margin-bottom:0;">
+        <label for="galeria-add-input">Añadir foto</label>
+        <input type="file" accept="image/*" id="galeria-add-input">
+      </div>
+      <p class="msg" id="galeria-msg"></p>
+    </section>
   </div>
 </div>
 
@@ -315,19 +326,22 @@
     direccion: 'Dirección (texto)', telefono: 'Teléfono (texto)', horario: 'Horario (texto)',
     sobre_titulo: 'Título "El toque de Ángela"', sobre_texto1: 'Primer párrafo sobre el salón',
     sobre_texto2: 'Segundo párrafo sobre el salón',
-    foto_hero: 'Foto de portada', foto_galeria_1: 'Foto galería 1', foto_galeria_2: 'Foto galería 2',
-    foto_galeria_3: 'Foto galería 3', logo: 'Logo'
+    foto_hero: 'Foto de portada', logo: 'Logo'
   };
-  var ORDEN_CAMPOS = ['hero_titulo', 'hero_subtitulo', 'direccion', 'telefono', 'horario', 'sobre_titulo', 'sobre_texto1', 'sobre_texto2', 'foto_hero', 'foto_galeria_1', 'foto_galeria_2', 'foto_galeria_3', 'logo'];
+  var ORDEN_CAMPOS = ['hero_titulo', 'hero_subtitulo', 'direccion', 'telefono', 'horario', 'sobre_titulo', 'sobre_texto1', 'sobre_texto2', 'foto_hero', 'logo'];
+  function esFotoGaleria(campo) { return campo.indexOf('galeria_') === 0; }
   function loadContenido() {
     callAdmin('listar_contenido').then(function (data) {
-      var rows = data.contenido || [];
+      var rows = (data.contenido || []).filter(function (r) { return !esFotoGaleria(r.campo); });
       rows.sort(function (a, b) {
         var ia = ORDEN_CAMPOS.indexOf(a.campo), ib = ORDEN_CAMPOS.indexOf(b.campo);
         if (ia === -1) ia = 999; if (ib === -1) ib = 999;
         return ia - ib;
       });
       renderContenido(rows);
+      var fotos = (data.contenido || []).filter(function (r) { return esFotoGaleria(r.campo) && r.valor; })
+        .sort(function (a, b) { return a.campo.localeCompare(b.campo); });
+      renderGaleria(fotos);
     }).catch(function () {});
   }
   var UPLOAD_URL = 'https://angela-conejero-peluqueria.netlify.app/.netlify/functions/upload-image';
@@ -410,6 +424,62 @@
       });
     });
   }
+
+  // ---- Galería ----
+  function renderGaleria(fotos) {
+    var grid = document.getElementById('galeria-grid');
+    if (!fotos.length) { grid.innerHTML = '<p class="panel-sub" style="margin:0;">Sin fotos todavía — añade la primera abajo.</p>'; return; }
+    grid.innerHTML = fotos.map(function (f) {
+      return '<div style="position:relative;">' +
+        '<img src="' + f.valor + '" style="width:100%; aspect-ratio:1; object-fit:cover; border-radius:3px; border:1px solid var(--line-strong); display:block;">' +
+        '<button class="btn danger" data-remove-foto="' + f.campo + '" style="position:absolute; top:4px; right:4px; padding:0.2rem 0.5rem; font-size:0.72rem;">✕</button>' +
+        '</div>';
+    }).join('');
+    grid.querySelectorAll('[data-remove-foto]').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        var campo = btn.getAttribute('data-remove-foto');
+        var msg = document.getElementById('galeria-msg');
+        if (!confirm('¿Quitar esta foto de la galería?')) return;
+        btn.disabled = true;
+        callAdmin('quitar_contenido', { campo: campo }).then(function () {
+          msg.textContent = 'Foto quitada.'; msg.className = 'msg ok';
+          loadContenido();
+        }).catch(function () {
+          msg.textContent = 'No se pudo quitar.'; msg.className = 'msg err';
+          btn.disabled = false;
+        });
+      });
+    });
+  }
+
+  document.getElementById('galeria-add-input').addEventListener('change', function () {
+    var fileInput = this;
+    var file = fileInput.files && fileInput.files[0];
+    if (!file) return;
+    var campo = 'galeria_' + Date.now();
+    var msg = document.getElementById('galeria-msg');
+    msg.textContent = 'Subiendo...'; msg.className = 'msg';
+    var reader = new FileReader();
+    reader.onload = function () {
+      var base64 = reader.result.split(',')[1];
+      fetch(UPLOAD_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'x-admin-key': getKey() },
+        body: JSON.stringify({ campo: campo, dataBase64: base64, contentType: file.type || 'image/jpeg' })
+      }).then(function (res) { return res.json().then(function (data) { return { ok: res.ok, data: data }; }); })
+        .then(function (r) {
+          if (!r.ok) throw new Error((r.data && r.data.error) || 'fallo al subir');
+          return callAdmin('guardar_contenido', { campo: campo, valor: r.data.url, tipo: 'imagen' });
+        }).then(function () {
+          msg.textContent = 'Foto añadida.'; msg.className = 'msg ok';
+          fileInput.value = '';
+          loadContenido();
+        }).catch(function (e) {
+          msg.textContent = 'No se pudo subir: ' + e.message; msg.className = 'msg err';
+        });
+    };
+    reader.readAsDataURL(file);
+  });
 
   // Auto-entrar si ya había una clave guardada en esta sesión del navegador
   if (getKey()) {
