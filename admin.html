@@ -330,25 +330,40 @@
       renderContenido(rows);
     }).catch(function () {});
   }
+  var UPLOAD_URL = 'https://angela-conejero-peluqueria.netlify.app/.netlify/functions/upload-image';
+
   function renderContenido(rows) {
     var wrap = document.getElementById('contenido-list');
     wrap.innerHTML = rows.map(function (r, i) {
       var label = CAMPO_LABELS[r.campo] || r.campo;
       var isImg = r.tipo === 'imagen';
-      var field = '<div class="field" style="margin-bottom:0.6rem;">' +
-        '<label>' + label + (isImg ? ' — URL de la foto' : '') + '</label>' +
-        (isImg
-          ? '<input type="text" data-campo="' + r.campo + '" data-tipo="imagen" value="' + (r.valor || '').replace(/"/g, '&quot;') + '" placeholder="https://...">'
-          : '<input type="text" data-campo="' + r.campo + '" data-tipo="texto" value="' + (r.valor || '').replace(/"/g, '&quot;') + '">') +
+      var valorEsc = (r.valor || '').replace(/"/g, '&quot;');
+      var textField = '<div class="field" style="margin-bottom:0.6rem;">' +
+        '<label>' + label + (isImg ? ' — enlace actual' : '') + '</label>' +
+        '<input type="text" data-campo="' + r.campo + '" data-tipo="' + r.tipo + '" value="' + valorEsc + '"' + (isImg ? ' placeholder="Sube una foto abajo, o pega un enlace aquí">' : '>') +
         '</div>';
-      return '<div style="display:flex; gap:0.7rem; align-items:end; margin-bottom:0.9rem;">' +
-        '<div style="flex:1;">' + field + '</div>' +
+      var preview = isImg && r.valor
+        ? '<img src="' + valorEsc + '" style="height:52px;width:52px;object-fit:cover;border-radius:3px;border:1px solid var(--line-strong);flex-shrink:0;">'
+        : '';
+      var uploadRow = isImg
+        ? '<div style="display:flex; align-items:center; gap:0.6rem; margin-top:0.4rem;">' +
+          preview +
+          '<input type="file" accept="image/*" data-upload-campo="' + r.campo + '" style="flex:1; font-size:0.82rem;">' +
+          '<span class="msg" data-upload-status="' + r.campo + '" style="margin:0; white-space:nowrap;"></span>' +
+          '</div>'
+        : '';
+      return '<div style="margin-bottom:1.1rem; padding-bottom:1rem; border-bottom:1px solid var(--line);">' +
+        '<div style="display:flex; gap:0.7rem; align-items:end;">' +
+        '<div style="flex:1;">' + textField + '</div>' +
         '<button class="btn" data-save-contenido="' + i + '" style="margin-bottom:0.6rem;">Guardar</button>' +
+        '</div>' +
+        uploadRow +
         '</div>';
     }).join('');
-    wrap.querySelectorAll('[data-save-contenido]').forEach(function (btn, i) {
+
+    wrap.querySelectorAll('[data-save-contenido]').forEach(function (btn) {
       btn.addEventListener('click', function () {
-        var row = btn.closest('div').querySelector('input');
+        var row = btn.closest('div').querySelector('input[data-campo]');
         var campo = row.getAttribute('data-campo');
         var tipo = row.getAttribute('data-tipo');
         var valor = row.value;
@@ -359,6 +374,39 @@
         }).catch(function () {
           msg.textContent = 'No se pudo guardar.'; msg.className = 'msg err';
         }).finally(function () { btn.disabled = false; });
+      });
+    });
+
+    wrap.querySelectorAll('[data-upload-campo]').forEach(function (fileInput) {
+      fileInput.addEventListener('change', function () {
+        var file = fileInput.files && fileInput.files[0];
+        if (!file) return;
+        var campo = fileInput.getAttribute('data-upload-campo');
+        var statusEl = wrap.querySelector('[data-upload-status="' + campo + '"]');
+        statusEl.textContent = 'Subiendo...'; statusEl.className = 'msg';
+        var reader = new FileReader();
+        reader.onload = function () {
+          var dataUrl = reader.result;
+          var base64 = dataUrl.split(',')[1];
+          fetch(UPLOAD_URL, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', 'x-admin-key': getKey() },
+            body: JSON.stringify({ campo: campo, dataBase64: base64, contentType: file.type || 'image/jpeg' })
+          }).then(function (res) { return res.json().then(function (data) { return { ok: res.ok, data: data }; }); })
+            .then(function (r) {
+              if (!r.ok) throw new Error((r.data && r.data.error) || 'fallo al subir');
+              return callAdmin('guardar_contenido', { campo: campo, valor: r.data.url, tipo: 'imagen' });
+            }).then(function () {
+              statusEl.textContent = 'Foto subida y guardada.'; statusEl.className = 'msg ok';
+              var textInput = wrap.querySelector('input[data-campo="' + campo + '"]');
+              if (textInput) textInput.value = r.data.url;
+              var img = fileInput.parentElement.querySelector('img');
+              if (img) img.src = r.data.url;
+            }).catch(function (e) {
+              statusEl.textContent = 'No se pudo subir: ' + e.message; statusEl.className = 'msg err';
+            });
+        };
+        reader.readAsDataURL(file);
       });
     });
   }

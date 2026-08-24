@@ -1,0 +1,7 @@
+{
+  "name": "angela-conejero-peluqueria",
+  "private": true,
+  "dependencies": {
+    "@netlify/blobs": "^11.0.1"
+  }
+}
