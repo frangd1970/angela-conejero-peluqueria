@@ -3,6 +3,15 @@ const { getStore } = require('@netlify/blobs');
 const ADMIN_KEY = 'Tijeras2026!';
 const MAX_BASE64_LENGTH = 6 * 1024 * 1024; // ~4.5MB de imagen real
 
+function fotosStore() {
+  const siteID = process.env.BLOBS_SITE_ID;
+  const token = process.env.BLOBS_TOKEN;
+  if (siteID && token) {
+    return getStore({ name: 'fotos', siteID: siteID, token: token });
+  }
+  return getStore('fotos');
+}
+
 exports.handler = async (event) => {
   if (event.httpMethod === 'OPTIONS') {
     return { statusCode: 204, headers: corsHeaders() };
@@ -36,7 +45,7 @@ exports.handler = async (event) => {
   }
 
   try {
-    const store = getStore('fotos');
+    const store = fotosStore();
     const safeCampo = String(campo).replace(/[^a-zA-Z0-9_-]/g, '');
     const blobKey = safeCampo + '-' + Date.now();
     const buffer = Buffer.from(dataBase64, 'base64');

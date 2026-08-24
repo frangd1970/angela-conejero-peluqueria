@@ -1,5 +1,14 @@
 const { getStore } = require('@netlify/blobs');
 
+function fotosStore() {
+  const siteID = process.env.BLOBS_SITE_ID;
+  const token = process.env.BLOBS_TOKEN;
+  if (siteID && token) {
+    return getStore({ name: 'fotos', siteID: siteID, token: token });
+  }
+  return getStore('fotos');
+}
+
 exports.handler = async (event) => {
   const params = event.queryStringParameters || {};
   const key = params.key;
@@ -8,7 +17,7 @@ exports.handler = async (event) => {
   }
 
   try {
-    const store = getStore('fotos');
+    const store = fotosStore();
     const result = await store.getWithMetadata(key, { type: 'arrayBuffer' });
     if (!result) {
       return { statusCode: 404, body: 'No encontrada' };
