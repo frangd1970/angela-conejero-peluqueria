@@ -89,12 +89,18 @@
     <p class="sub">Precios, días cerrados y reservas por teléfono.</p>
 
     <section class="panel">
-      <h2>Precios</h2>
-      <p class="panel-sub">Cambia el precio o la duración y pulsa Guardar en esa fila.</p>
+      <h2>Servicios y precios</h2>
+      <p class="panel-sub">Cambia el precio o la duración y pulsa Guardar en esa fila. También puedes quitar o añadir servicios.</p>
       <table>
-        <thead><tr><th>Servicio</th><th>Duración (min)</th><th>Precio (€)</th><th></th></tr></thead>
+        <thead><tr><th>Servicio</th><th>Duración (min)</th><th>Precio (€)</th><th></th><th></th></tr></thead>
         <tbody id="precios-body"></tbody>
       </table>
+      <div class="row3" style="margin-top:1.2rem;">
+        <div class="field" style="margin-bottom:0;"><label for="nuevo-servicio">Nuevo servicio</label><input type="text" id="nuevo-servicio" placeholder="Nombre del servicio"></div>
+        <div class="field" style="margin-bottom:0;"><label for="nuevo-duracion">Duración (min)</label><input type="number" id="nuevo-duracion" value="30"></div>
+        <div class="field" style="margin-bottom:0;"><label for="nuevo-precio">Precio (€)</label><input type="number" id="nuevo-precio" value="0"></div>
+        <button class="btn" id="nuevo-servicio-btn">Añadir</button>
+      </div>
       <p class="msg" id="precios-msg"></p>
     </section>
 
@@ -123,6 +129,13 @@
       <div class="field"><label for="rm-hora">Hora</label><input type="text" id="rm-hora" placeholder="17:00"></div>
       <button class="btn" id="rm-btn">Guardar reserva</button>
       <p class="msg" id="rm-msg"></p>
+    </section>
+
+    <section class="panel">
+      <h2>Contenido de la web</h2>
+      <p class="panel-sub">Textos e imágenes de la página principal. Para una imagen, pega la dirección web (URL) de la foto — súbela antes a donde prefieras (Instagram, Facebook, Google Fotos con enlace público...) y copia su enlace aquí.</p>
+      <div id="contenido-list"></div>
+      <p class="msg" id="contenido-msg"></p>
     </section>
   </div>
 </div>
@@ -157,6 +170,7 @@
     document.getElementById('app').style.display = 'block';
     loadPrecios();
     loadDias();
+    loadContenido();
   }
 
   document.getElementById('gate-btn').addEventListener('click', function () {
@@ -179,13 +193,14 @@
   }
   function renderPrecios() {
     var tbody = document.getElementById('precios-body');
-    if (!currentPrecios.length) { tbody.innerHTML = '<tr class="empty-row"><td colspan="4">Sin precios todavía.</td></tr>'; return; }
+    if (!currentPrecios.length) { tbody.innerHTML = '<tr class="empty-row"><td colspan="5">Sin precios todavía.</td></tr>'; return; }
     tbody.innerHTML = currentPrecios.map(function (p, i) {
       return '<tr>' +
         '<td>' + p.servicio + '</td>' +
         '<td><input type="number" min="0" step="5" data-i="' + i + '" data-f="duracion" value="' + p.duracion + '"></td>' +
         '<td><input type="number" min="0" step="1" data-i="' + i + '" data-f="precio" value="' + p.precio + '"></td>' +
         '<td><button class="btn" data-save="' + i + '">Guardar</button></td>' +
+        '<td><button class="btn danger" data-remove="' + i + '">Quitar</button></td>' +
         '</tr>';
     }).join('');
     tbody.querySelectorAll('[data-save]').forEach(function (btn) {
@@ -205,7 +220,39 @@
         }).finally(function () { btn.disabled = false; });
       });
     });
+    tbody.querySelectorAll('[data-remove]').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        var i = Number(btn.getAttribute('data-remove'));
+        var servicio = currentPrecios[i].servicio;
+        var msg = document.getElementById('precios-msg');
+        if (!confirm('¿Quitar "' + servicio + '" de los servicios?')) return;
+        btn.disabled = true;
+        callAdmin('quitar_precio', { servicio: servicio }).then(function () {
+          msg.textContent = 'Servicio quitado.'; msg.className = 'msg ok';
+          loadPrecios();
+        }).catch(function () {
+          msg.textContent = 'No se pudo quitar.'; msg.className = 'msg err';
+          btn.disabled = false;
+        });
+      });
+    });
   }
+  document.getElementById('nuevo-servicio-btn').addEventListener('click', function () {
+    var servicio = document.getElementById('nuevo-servicio').value.trim();
+    var duracion = Number(document.getElementById('nuevo-duracion').value);
+    var precio = Number(document.getElementById('nuevo-precio').value);
+    var msg = document.getElementById('precios-msg');
+    if (!servicio) { msg.textContent = 'Escribe el nombre del servicio.'; msg.className = 'msg err'; return; }
+    callAdmin('guardar_precio', { servicio: servicio, duracion: duracion, precio: precio }).then(function () {
+      document.getElementById('nuevo-servicio').value = '';
+      document.getElementById('nuevo-duracion').value = '30';
+      document.getElementById('nuevo-precio').value = '0';
+      msg.textContent = 'Servicio añadido.'; msg.className = 'msg ok';
+      loadPrecios();
+    }).catch(function () {
+      msg.textContent = 'No se pudo añadir.'; msg.className = 'msg err';
+    });
+  });
 
   // ---- Días cerrados ----
   var currentDias = [];
@@ -261,6 +308,60 @@
       msg.textContent = 'No se pudo guardar la reserva.'; msg.className = 'msg err';
     }).finally(function () { btn.disabled = false; });
   });
+
+  // ---- Contenido de la web ----
+  var CAMPO_LABELS = {
+    hero_titulo: 'Título principal', hero_subtitulo: 'Subtítulo principal',
+    direccion: 'Dirección (texto)', telefono: 'Teléfono (texto)', horario: 'Horario (texto)',
+    sobre_titulo: 'Título "El toque de Ángela"', sobre_texto1: 'Primer párrafo sobre el salón',
+    sobre_texto2: 'Segundo párrafo sobre el salón',
+    foto_hero: 'Foto de portada', foto_galeria_1: 'Foto galería 1', foto_galeria_2: 'Foto galería 2',
+    foto_galeria_3: 'Foto galería 3', logo: 'Logo'
+  };
+  var ORDEN_CAMPOS = ['hero_titulo', 'hero_subtitulo', 'direccion', 'telefono', 'horario', 'sobre_titulo', 'sobre_texto1', 'sobre_texto2', 'foto_hero', 'foto_galeria_1', 'foto_galeria_2', 'foto_galeria_3', 'logo'];
+  function loadContenido() {
+    callAdmin('listar_contenido').then(function (data) {
+      var rows = data.contenido || [];
+      rows.sort(function (a, b) {
+        var ia = ORDEN_CAMPOS.indexOf(a.campo), ib = ORDEN_CAMPOS.indexOf(b.campo);
+        if (ia === -1) ia = 999; if (ib === -1) ib = 999;
+        return ia - ib;
+      });
+      renderContenido(rows);
+    }).catch(function () {});
+  }
+  function renderContenido(rows) {
+    var wrap = document.getElementById('contenido-list');
+    wrap.innerHTML = rows.map(function (r, i) {
+      var label = CAMPO_LABELS[r.campo] || r.campo;
+      var isImg = r.tipo === 'imagen';
+      var field = '<div class="field" style="margin-bottom:0.6rem;">' +
+        '<label>' + label + (isImg ? ' — URL de la foto' : '') + '</label>' +
+        (isImg
+          ? '<input type="text" data-campo="' + r.campo + '" data-tipo="imagen" value="' + (r.valor || '').replace(/"/g, '&quot;') + '" placeholder="https://...">'
+          : '<input type="text" data-campo="' + r.campo + '" data-tipo="texto" value="' + (r.valor || '').replace(/"/g, '&quot;') + '">') +
+        '</div>';
+      return '<div style="display:flex; gap:0.7rem; align-items:end; margin-bottom:0.9rem;">' +
+        '<div style="flex:1;">' + field + '</div>' +
+        '<button class="btn" data-save-contenido="' + i + '" style="margin-bottom:0.6rem;">Guardar</button>' +
+        '</div>';
+    }).join('');
+    wrap.querySelectorAll('[data-save-contenido]').forEach(function (btn, i) {
+      btn.addEventListener('click', function () {
+        var row = btn.closest('div').querySelector('input');
+        var campo = row.getAttribute('data-campo');
+        var tipo = row.getAttribute('data-tipo');
+        var valor = row.value;
+        var msg = document.getElementById('contenido-msg');
+        btn.disabled = true;
+        callAdmin('guardar_contenido', { campo: campo, valor: valor, tipo: tipo }).then(function () {
+          msg.textContent = 'Guardado — se verá en la web al recargarla.'; msg.className = 'msg ok';
+        }).catch(function () {
+          msg.textContent = 'No se pudo guardar.'; msg.className = 'msg err';
+        }).finally(function () { btn.disabled = false; });
+      });
+    });
+  }
 
   // Auto-entrar si ya había una clave guardada en esta sesión del navegador
   if (getKey()) {
