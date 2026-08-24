@@ -561,15 +561,23 @@
   var lastGallerySrcs = null;
   var lastGalleryZoomed = false;
 
-  function renderGallery(srcArr, zoomed) {
+  function escapeHtml(s) {
+    return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  }
+
+  function renderGallery(items, zoomed) {
     var grid = document.getElementById('gallery-grid');
-    if (!grid || !srcArr.length) return;
-    lastGallerySrcs = srcArr;
+    if (!grid || !items.length) return;
+    lastGallerySrcs = items;
     lastGalleryZoomed = zoomed;
-    var layout = computeGalleryLayout(srcArr.length, maxPerRowForViewport());
+    var layout = computeGalleryLayout(items.length, maxPerRowForViewport());
     grid.style.gridTemplateColumns = 'repeat(' + layout.cols + ', 1fr)';
-    grid.innerHTML = srcArr.map(function (src) {
-      return '<div class="photo-slot light has-photo' + (zoomed ? ' zoomed' : '') + '"><img src="' + src + '" alt="Foto del salón"></div>';
+    grid.innerHTML = items.map(function (it) {
+      var item = (typeof it === 'string') ? { src: it, texto: '' } : it;
+      var cap = item.texto
+        ? '<div class="scrim"></div><span class="ps-cap">' + escapeHtml(item.texto) + '</span>'
+        : '';
+      return '<div class="photo-slot light has-photo' + (zoomed ? ' zoomed' : '') + '"><img src="' + item.src + '" alt="Foto del salón">' + cap + '</div>';
     }).join('');
   }
 
@@ -771,9 +779,12 @@
         };
         var IMG_IDS = { foto_hero: 'c-foto-hero', logo: 'c-logo' };
                 var galeriaFotos = data.contenido
-          .filter(function (row) { return row.campo.indexOf('galeria_') === 0 && row.valor; })
+          .filter(function (row) { return row.campo.indexOf('galeria_') === 0 && row.campo.indexOf('_texto') === -1 && row.valor; })
           .sort(function (a, b) { return a.campo.localeCompare(b.campo); })
-          .map(function (row) { return row.valor; });
+          .map(function (row) {
+            var textoRow = data.contenido.filter(function (r) { return r.campo === row.campo + '_texto'; })[0];
+            return { src: row.valor, texto: (textoRow && textoRow.valor) || '' };
+          });
         if (galeriaFotos.length) renderGallery(galeriaFotos, false);
         data.contenido.forEach(function (row) {
           if (!row.valor) return; // vacío = mantener el contenido de respaldo

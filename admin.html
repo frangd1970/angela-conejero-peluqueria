@@ -140,7 +140,7 @@
 
     <section class="panel">
       <h2>Galería</h2>
-      <p class="panel-sub">Añade tantas fotos como quieras — se reparten solas en filas equilibradas en la web. Puedes subirlas desde la galería del móvil, la cámara, o archivos del ordenador.</p>
+      <p class="panel-sub">Añade tantas fotos como quieras — se reparten solas en filas equilibradas en la web. Puedes subirlas desde la galería del móvil, la cámara, o archivos del ordenador. Debajo de cada foto puedes escribir un pequeño texto que aparecerá sobre ella (opcional).</p>
       <div id="galeria-grid" style="display:grid; grid-template-columns:repeat(auto-fill, minmax(90px, 1fr)); gap:0.8rem; margin-bottom:1.2rem;"></div>
       <div class="field" style="margin-bottom:0;">
         <label for="galeria-add-input">Añadir foto</label>
@@ -339,8 +339,13 @@
         return ia - ib;
       });
       renderContenido(rows);
-      var fotos = (data.contenido || []).filter(function (r) { return esFotoGaleria(r.campo) && r.valor; })
-        .sort(function (a, b) { return a.campo.localeCompare(b.campo); });
+      var todas = data.contenido || [];
+      var fotos = todas.filter(function (r) { return esFotoGaleria(r.campo) && r.campo.indexOf('_texto') === -1 && r.valor; })
+        .sort(function (a, b) { return a.campo.localeCompare(b.campo); })
+        .map(function (r) {
+          var textoRow = todas.filter(function (t) { return t.campo === r.campo + '_texto'; })[0];
+          return { campo: r.campo, valor: r.valor, texto: (textoRow && textoRow.valor) || '' };
+        });
       renderGaleria(fotos);
     }).catch(function () {});
   }
@@ -430,9 +435,14 @@
     var grid = document.getElementById('galeria-grid');
     if (!fotos.length) { grid.innerHTML = '<p class="panel-sub" style="margin:0;">Sin fotos todavía — añade la primera abajo.</p>'; return; }
     grid.innerHTML = fotos.map(function (f) {
+      var textoEsc = (f.texto || '').replace(/"/g, '&quot;');
       return '<div style="position:relative;">' +
         '<img src="' + f.valor + '" style="width:100%; aspect-ratio:1; object-fit:cover; border-radius:3px; border:1px solid var(--line-strong); display:block;">' +
         '<button class="btn danger" data-remove-foto="' + f.campo + '" style="position:absolute; top:4px; right:4px; padding:0.2rem 0.5rem; font-size:0.72rem;">✕</button>' +
+        '<div style="display:flex; gap:0.3rem; margin-top:0.4rem;">' +
+        '<input type="text" data-texto-foto="' + f.campo + '" value="' + textoEsc + '" placeholder="Texto (opcional)" style="flex:1; font-size:0.78rem; padding:0.3rem 0.4rem;">' +
+        '<button class="btn" data-save-texto="' + f.campo + '" style="padding:0.3rem 0.5rem; font-size:0.72rem;">Guardar</button>' +
+        '</div>' +
         '</div>';
     }).join('');
     grid.querySelectorAll('[data-remove-foto]').forEach(function (btn) {
@@ -442,12 +452,27 @@
         if (!confirm('¿Quitar esta foto de la galería?')) return;
         btn.disabled = true;
         callAdmin('quitar_contenido', { campo: campo }).then(function () {
+          return callAdmin('quitar_contenido', { campo: campo + '_texto' }).catch(function () {});
+        }).then(function () {
           msg.textContent = 'Foto quitada.'; msg.className = 'msg ok';
           loadContenido();
         }).catch(function () {
           msg.textContent = 'No se pudo quitar.'; msg.className = 'msg err';
           btn.disabled = false;
         });
+      });
+    });
+    grid.querySelectorAll('[data-save-texto]').forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        var campo = btn.getAttribute('data-save-texto');
+        var input = grid.querySelector('[data-texto-foto="' + campo + '"]');
+        var msg = document.getElementById('galeria-msg');
+        btn.disabled = true;
+        callAdmin('guardar_contenido', { campo: campo + '_texto', valor: input.value, tipo: 'texto' }).then(function () {
+          msg.textContent = 'Texto guardado.'; msg.className = 'msg ok';
+        }).catch(function () {
+          msg.textContent = 'No se pudo guardar el texto.'; msg.className = 'msg err';
+        }).finally(function () { btn.disabled = false; });
       });
     });
   }
