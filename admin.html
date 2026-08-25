@@ -407,6 +407,7 @@
         reader.onload = function () {
           var dataUrl = reader.result;
           var base64 = dataUrl.split(',')[1];
+          var uploadedUrl;
           fetch(UPLOAD_URL, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json', 'x-admin-key': getKey() },
@@ -414,13 +415,14 @@
           }).then(function (res) { return res.json().then(function (data) { return { ok: res.ok, data: data }; }); })
             .then(function (r) {
               if (!r.ok) throw new Error((r.data && (r.data.error + (r.data.detail ? ': ' + r.data.detail : ''))) || 'fallo al subir');
-              return callAdmin('guardar_contenido', { campo: campo, valor: r.data.url, tipo: 'imagen' });
+              uploadedUrl = r.data.url;
+              return callAdmin('guardar_contenido', { campo: campo, valor: uploadedUrl, tipo: 'imagen' });
             }).then(function () {
               statusEl.textContent = 'Foto subida y guardada.'; statusEl.className = 'msg ok';
               var textInput = wrap.querySelector('input[data-campo="' + campo + '"]');
-              if (textInput) textInput.value = r.data.url;
+              if (textInput) textInput.value = uploadedUrl;
               var img = fileInput.parentElement.querySelector('img');
-              if (img) img.src = r.data.url;
+              if (img) img.src = uploadedUrl;
             }).catch(function (e) {
               statusEl.textContent = 'No se pudo subir: ' + e.message; statusEl.className = 'msg err';
             });
